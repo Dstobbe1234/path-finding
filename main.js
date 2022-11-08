@@ -4,7 +4,7 @@ cnv.width = 800;
 cnv.height = 800;
 
 let startBtn = document.getElementById("start");
-let pauseBtn = document.getElementById("pause");
+let stepBtn = document.getElementById("step");
 
 let interval;
 let paused;
@@ -35,6 +35,10 @@ startBtn.addEventListener("click", () => {
   }
 });
 
+stepBtn.addEventListener("click", () => {
+  search();
+});
+
 let openSet = [];
 let closedSet = [];
 let walls = [];
@@ -53,7 +57,6 @@ class Cell {
     this.g = 0;
     this.h = 0;
     this.neighbours = [];
-    this.neighbours1 = [];
     this.color = "white";
     this.isWall = false;
     this.parent;
@@ -72,46 +75,33 @@ class Cell {
     ctx.fillText(texth, this.x * size + 30, this.y * size + 60);
   }
   addNeighbours() {
-    const array = grid.flat(1).map((cell) => JSON.stringify([cell.x, cell.y]));
-    const closedSetStr = closedSet.map((cell) => JSON.stringify([cell.x, cell.y]));
-    const openSetStr = openSet.map((cell) => JSON.stringify([cell.x, cell.y]));
+    const top = { col: this.x, row: this.y - 1 };
+    const bottom = { col: this.x, row: this.y + 1 };
+    const left = { col: this.x - 1, row: this.y };
+    const right = { col: this.x + 1, row: this.y };
+    const topL = { col: this.x - 1, row: this.y - 1 };
+    const topR = { col: this.x + 1, row: this.y - 1 };
+    const bottomL = { col: this.x - 1, row: this.y + 1 };
+    const bottomR = { col: this.x + 1, row: this.y + 1 };
 
-    let lneighbour = `[${this.x - 1},${this.y}]`;
-    let rneighbour = `[${this.x + 1},${this.y}]`;
-    let tneighbour = `[${this.x},${this.y - 1}]`;
-    let bneighbour = `[${this.x},${this.y + 1}]`;
+    checkNeighbour(top, this);
+    checkNeighbour(bottom, this);
+    checkNeighbour(left, this);
+    checkNeighbour(right, this);
+    checkNeighbour(topL, this);
+    checkNeighbour(topR, this);
+    checkNeighbour(bottomL, this);
+    checkNeighbour(bottomR, this);
 
-    checkNeighbour(lneighbour, this);
-    checkNeighbour(rneighbour, this);
-    checkNeighbour(tneighbour, this);
-    checkNeighbour(bneighbour, this);
+    function checkNeighbour(neighbourI, cell) {
+      if (!grid[neighbourI.col] || !grid[neighbourI.col][neighbourI.row]) return;
+      const neighbour = grid[neighbourI.col][neighbourI.row];
 
-    this.neighbours.forEach((neighbour) => {
-      grid.flat(1)[neighbour].parent = this;
-    });
-
-    function checkNeighbour(neighbour, cell) {
-      const index = array.indexOf(neighbour);
-
-      if (
-        index != -1 &&
-        !closedSetStr.includes(neighbour) &&
-        !openSetStr.includes(neighbour) &&
-        !grid.flat(1)[index].isWall
-      ) {
-        cell.neighbours.push(index);
+      if (neighbour && !closedSet.includes(neighbour) && !openSet.includes(neighbour) && !neighbour.isWall) {
+        cell.neighbours.push(neighbour);
+        neighbour.parent = cell;
       }
     }
-
-    const up = { row: this.x, col: this.y - 1 };
-    const down = { row: this.x, col: this.y + 1 };
-    const left = { row: this.x - 1, col: this.y };
-    const right = { row: this.x + 1, col: this.y };
-
-    if (grid[up.row] && grid[up.row][up.col]) this.neighbours1.push(up);
-    if (grid[down.row] && grid[down.row][down.col]) this.neighbours1.push(down);
-    if (grid[left.row] && grid[left.row][left.col]) this.neighbours1.push(left);
-    if (grid[right.row] && grid[right.row][right.col]) this.neighbours1.push(right);
   }
   makeWall() {
     this.isWall = true;
@@ -150,26 +140,24 @@ function search() {
     let current = openSet[winner];
     if (current == end) {
       let parent = current;
-      for (let i = 0; i <= current.g; i++) {
+      for (let i = 0; i <= current.g / size; i++) {
         path.push(parent);
         parent = parent.parent;
       }
-      console.log(path);
       clearInterval(interval);
       done = true;
     } else {
       current.addNeighbours();
       for (let i = 0; i < current.neighbours.length; i++) {
-        const neighbour = grid.flat(1)[current.neighbours[i]];
+        // const neighbour = grid.flat(1)[current.neighbours[i]];
 
-        const neighbourI = current.neighbours1[i];
-        const neighbour1 = grid[neighbourI.col][neighbourI.row];
+        const neighbour = current.neighbours[i];
 
         openSet.push(neighbour);
         neighbour.color = "green";
-        neighbour.h = Math.sqrt((neighbour.x - end.x) ** 2 + (neighbour.y - end.y) ** 2);
+        neighbour.h = Math.sqrt((neighbour.x * size - end.x * size) ** 2 + (neighbour.y * size - end.y * size) ** 2);
         // neighbour.h = Math.abs(end.x - neighbour.x) + Math.abs(end.y - neighbour.y);
-        neighbour.g = current.g + 1;
+        neighbour.g = current.g + size;
         neighbour.f = neighbour.g + neighbour.h;
       }
     }
